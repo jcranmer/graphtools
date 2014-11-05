@@ -79,6 +79,17 @@ def build_dataset(csvfd, xcol, ycols=None):
         ycols = range(len(columndata))
     return [DataSet(columndata[xcol], columndata[ycol]) for ycol in ycols]
 
+def choose_default_color(index):
+    # These colors are taken from Cynthia Brewer's ColorBrewer application,
+    # specifically the "Set1" qualitative color scheme. Some of the colors are
+    # slightly reordered--I moved orange before purple, and I removed yellow.
+    # The later colors in the palette fail to show up well in the graph as thin
+    # lines and hence are completely removed, although if you want more than six
+    # lines on the same graph, you're doing something wrong.
+    colors = ["#e41a1c", "#377eb8", "#4daf4a", "#ff7f00",
+        "#984ea3", "#a65628"]
+    return colors[index]
+
 def make_plot(datasets, outfd):
     basex = datasets[0].xvalues
     for ds in datasets:
@@ -96,11 +107,14 @@ def make_plot(datasets, outfd):
         plot.stdin.write(" '-'")
 
         # Add data columns
-        #plot.stdin.write(" using %d:%d" % (len(cols) + 1, len(cols) + 2))
         files.append([ds.xvalues, ds.yvalues])
 
         # With the dataset type
         plot.stdin.write(" with linespoints")
+
+        # Colors
+        color = ds.color or choose_default_color(len(files) - 1)
+        plot.stdin.write(" linetype rgb \"" + color + "\"")
 
         # Title
         plot.stdin.write(" " + ds.make_title())
