@@ -35,6 +35,10 @@ class DataSet(object):
         data = [(x, func(y)) for (x, y) in bins.iteritems()]
         data.sort()
         self.xvalues, self.yvalues = zip(*data)
+        return self
+
+    def mean(self):
+        return self.average(lambda vals: sum(vals)/len(vals))
 
     def baseline(self, dataset):
         assert self.xvalues == dataset.xvalues
