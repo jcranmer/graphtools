@@ -32,9 +32,9 @@ def runTest(test, xunitfile):
         rawstderr = stderr.read()
         if rawstderr:
             import xml.sax.saxutils
-            xunitfile.write('<stderr>\n')
+            xunitfile.write('<system-err>\n')
             xunitfile.write(xml.sax.saxutils.quoteattr(rawstderr))
-            xunitfile.write('</stderr>\n')
+            xunitfile.write('</system-err>\n')
 
 with open(sys.argv[1], 'w') as xunitfile:
     xunitfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
