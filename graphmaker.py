@@ -10,6 +10,7 @@ class DataSet(object):
 
     color = None
     title = None
+    style = "linespoints"
     xvalues = []
     yvalues = []
 
@@ -72,7 +73,7 @@ class DataTable(object):
     def __getitem__(self, index):
         return self.data[index]
 
-def build_dataset(csvfd, xcol, ycols=None):
+def build_dataset(csvfd, xcol, ycols=None, usetitles=False):
     parse = float
     reader = csv.reader(csvfd)
     header = next(reader)
@@ -81,7 +82,11 @@ def build_dataset(csvfd, xcol, ycols=None):
         map(lambda d: d[0].append(parse(d[1])), zip(columndata, row))
     if ycols is None:
         ycols = range(len(columndata))
-    return [DataSet(columndata[xcol], columndata[ycol]) for ycol in ycols]
+    data = [DataSet(columndata[xcol], columndata[ycol]) for ycol in ycols]
+    if usetitles:
+        for ycol in ycols:
+            data[ycol].title = header[ycol]
+    return data
 
 def choose_default_color(index):
     # These colors are taken from Cynthia Brewer's ColorBrewer application,
@@ -94,13 +99,20 @@ def choose_default_color(index):
         "#984ea3", "#a65628"]
     return colors[index]
 
+def get_point_type(index):
+    # The point order I'm going for is circle, square, triangle, +, X, filled
+    # diamond. I'm not really happy with the last one, but you really run out of
+    # distinct point types pretty quickly.
+    points = [6, 4, 8, 1, 2, 13]
+    return str(points[index])
+
 def make_plot(datasets, outfd):
     basex = datasets[0].xvalues
     for ds in datasets:
         if basex != ds.xvalues:
             raise Exception('Incompatible datasets')
     plot = subprocess.Popen('gnuplot', stdin=subprocess.PIPE, stdout=outfd)
-    plot.stdin.write('set term png enhanced\n')
+    plot.stdin.write('set term pngcairo enhanced\n')
     plot.stdin.write("set datafile separator ','\n")
     plot.stdin.write(plot_commands)
     plot.stdin.write("plot")
@@ -114,7 +126,10 @@ def make_plot(datasets, outfd):
         files.append([ds.xvalues, ds.yvalues])
 
         # With the dataset type
-        plot.stdin.write(" with linespoints")
+        plot.stdin.write(" with " + ds.style)
+
+        if ds.style == 'linespoints':
+            plot.stdin.write(" pt " + get_point_type(len(files) - 1))
 
         # Colors
         color = ds.color or choose_default_color(len(files) - 1)
@@ -157,9 +172,9 @@ def add_gnuplot_commands(commands):
         plot_commands += '\n'
     plot_commands += commands
 
-def read_csv(filename, xcol):
+def read_csv(filename, xcol, **kwargs):
     with open(filename, 'r') as fd:
-        return DataTable(build_dataset(fd, xcol))
+        return DataTable(build_dataset(fd, xcol, **kwargs))
 
 gImageFile = None
 def plot(datasets):
