@@ -15,15 +15,26 @@ graphmaker = os.path.join(directory, "graphmaker.py")
 testdir = os.path.join(directory, "tests")
 tests = filter(lambda f : f.endswith('.png'), os.listdir(testdir))
 
-def runTest(test):
+def runTest(test, xunitfile):
     testscript = os.path.join(testdir, os.path.splitext(test)[0] + ".py")
     gold = os.path.join(testdir, test)
     if not os.path.exists(testscript):
         raise Exception("Cannot find file %s" % os.path.basename(testscript))
     output = os.tmpfile()
-    subprocess.check_call([graphmaker, testscript], stdout=output, cwd=testdir)
-    output.seek(0)
-    subprocess.check_call(["cmp", gold], stdin=output)
+    stderr = os.tmpfile()
+    try:
+        subprocess.check_call([graphmaker, testscript], stdout=output,
+            stderr=stderr, cwd=testdir)
+        output.seek(0)
+        subprocess.check_call(["cmp", gold], stdin=output, stderr=stderr)
+    finally:
+        stderr.seek(0)
+        rawstderr = stderr.read()
+        if rawstderr:
+            import xml.sax.saxutils
+            xunitfile.write('<stderr>\n')
+            xunitfile.write(xml.sax.saxutils.quoteattr(rawstderr))
+            xunitfile.write('</stderr>\n')
 
 with open(sys.argv[1], 'w') as xunitfile:
     xunitfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -31,7 +42,7 @@ with open(sys.argv[1], 'w') as xunitfile:
     for test in tests:
         xunitfile.write('<testcase name="%s">\n' % test)
         try:
-            runTest(test)
+            runTest(test, xunitfile)
         except:
             print "Test", test, "failed:", sys.exc_info()[1]
             xunitfile.write('<failure type="Unknown">%s</failure>\n'
