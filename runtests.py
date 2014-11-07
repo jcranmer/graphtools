@@ -4,6 +4,10 @@ import os
 import subprocess
 import sys
 
+if len(sys.argv) != 2:
+    print >>sys.stderr, "Usage: %0 xunit.xml" % sys.argv[0]
+    sys.exit(1)
+
 # This is the directory of runtests.py
 directory = os.path.dirname(os.path.realpath(__file__))
 
@@ -21,8 +25,16 @@ def runTest(test):
     output.seek(0)
     subprocess.check_call(["cmp", gold], stdin=output)
 
-for test in tests:
-    try:
-        runTest(test)
-    except:
-        print "Test", test, "failed:", sys.exc_info()[1]
+with open(sys.argv[1], 'w') as xunitfile:
+    xunitfile.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    xunitfile.write('<testsuite name="graphtools" tests="%d">\n' % len(tests))
+    for test in tests:
+        xunitfile.write('<testcase name="%s">\n' % test)
+        try:
+            runTest(test)
+        except:
+            print "Test", test, "failed:", sys.exc_info()[1]
+            xunitfile.write('<failure type="Unknown">%s</failure>\n'
+                % sys.exc_info()[1])
+        xunitfile.write('</testcase>\n')
+    xunitfile.write('</testsuite>\n')
